@@ -122,11 +122,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   font-size: 10px; font-weight: 600; padding: 2px 10px; border-radius: 12px;
   white-space: nowrap;
 }
-.assignee-pill.assignee-vanessa { background: #fef2f2; color: #dc2626; }
-.assignee-pill.assignee-alfred { background: #eff6ff; color: #1d4ed8; }
-.assignee-pill.assignee-kathy { background: #f0fdf4; color: #15803d; }
-.assignee-pill.assignee-alberto { background: #faf5ff; color: #7c3aed; }
 .assignee-pill.assignee-default { background: #f3f4f6; color: #6b7280; }
+.color-settings {
+  margin-bottom: 16px; padding: 14px; border: 1px solid var(--vv-border);
+  border-radius: 8px; background: #fafbfc; display: none;
+}
+.color-settings.open { display: block; }
+.color-settings h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.color-row label { font-size: 12px; min-width: 70px; font-weight: 500; }
+.color-row select { padding: 5px 8px; border: 1px solid var(--vv-border); border-radius: 6px; font-size: 12px; font-family: inherit; }
+.color-swatch { width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-right: 4px; }
+.btn-color-toggle {
+  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
+  padding: 4px 12px; font-size: 11px; cursor: pointer; color: var(--vv-muted); margin-left: auto;
+}
+.btn-color-toggle:hover { background: #f3f4f6; color: var(--vv-text); }
 .task-detail { font-size: 12px; color: var(--vv-muted); margin-top: 4px; }
 .task-actions { display: flex; gap: 4px; flex-shrink: 0; margin-top: 2px; }
 .btn-sm {
@@ -276,8 +287,34 @@ let editingTaskId = null;
 /* ===== HELPERS ===== */
 function gid(){ return 't-'+Date.now()+'-'+Math.random().toString(36).slice(2,7); }
 
-const ASSIGNEE_COLORS = { vanessa:'assignee-vanessa', alfred:'assignee-alfred', kathy:'assignee-kathy', alberto:'assignee-alberto' };
-function assigneeClass(name){ return ASSIGNEE_COLORS[(name||'').toLowerCase()] || 'assignee-default'; }
+const COLOR_PALETTE = {
+  ocean:    { bg:'#eff6ff', fg:'#1d4ed8', label:'Ocean Blue' },
+  emerald:  { bg:'#f0fdf4', fg:'#15803d', label:'Emerald' },
+  violet:   { bg:'#faf5ff', fg:'#7c3aed', label:'Violet' },
+  teal:     { bg:'#f0fdfa', fg:'#0d9488', label:'Teal' },
+  amber:    { bg:'#fffbeb', fg:'#b45309', label:'Amber' },
+  rose:     { bg:'#fff1f2', fg:'#be123c', label:'Rose' },
+  sky:      { bg:'#f0f9ff', fg:'#0369a1', label:'Sky' },
+  fuchsia:  { bg:'#fdf4ff', fg:'#a21caf', label:'Fuchsia' },
+  slate:    { bg:'#f1f5f9', fg:'#475569', label:'Slate' },
+  indigo:   { bg:'#eef2ff', fg:'#4338ca', label:'Indigo' },
+};
+const assigneeColors = { vanessa:'teal', alfred:'ocean', kathy:'emerald', alberto:'violet' };
+let colorSettingsOpen = false;
+
+function assigneeStyle(name) {
+  const key = (name||'').toLowerCase();
+  const palKey = assigneeColors[key];
+  if (palKey && COLOR_PALETTE[palKey]) {
+    const c = COLOR_PALETTE[palKey];
+    return 'background:'+c.bg+';color:'+c.fg;
+  }
+  return '';
+}
+function assigneeClass(name) {
+  const key = (name||'').toLowerCase();
+  return assigneeColors[key] ? '' : 'assignee-default';
+}
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function daysUntil(ds){
@@ -407,6 +444,25 @@ function renderPanel(){
     +'<button class="btn-delete-project" id="btn-delete-proj">Delete</button></div>';
   h+='<div id="proj-form-slot"></div>';
 
+  // Color settings panel
+  h+='<div class="color-settings'+(colorSettingsOpen?' open':'')+'" id="color-settings">';
+  h+='<h4>Assignee Colors</h4>';
+  const palKeys=Object.keys(COLOR_PALETTE);
+  ['Vanessa','Alfred','Kathy','Alberto'].forEach(name=>{
+    const key=name.toLowerCase();
+    const cur=assigneeColors[key]||'ocean';
+    const sty=assigneeStyle(name);
+    h+='<div class="color-row">';
+    h+='<span class="assignee-pill" style="'+(sty||'background:#f3f4f6;color:#6b7280')+'">'+name+'</span>';
+    h+='<select class="color-pick" data-person="'+key+'">';
+    palKeys.forEach(pk=>{
+      const c=COLOR_PALETTE[pk];
+      h+='<option value="'+pk+'"'+(cur===pk?' selected':'')+'>'+c.label+'</option>';
+    });
+    h+='</select></div>';
+  });
+  h+='</div>';
+
   // Toolbar
   h+='<div class="toolbar">';
   ['all','pending','done','high','overdue'].forEach(f=>{
@@ -420,7 +476,9 @@ function renderPanel(){
   h+='<option value="priority"'+(currentSort==='priority'?' selected':'')+'>Priority</option>';
   h+='<option value="name"'+(currentSort==='name'?' selected':'')+'>Name</option>';
   h+='<option value="assignee"'+(currentSort==='assignee'?' selected':'')+'>Assignee</option>';
-  h+='</select></div>';
+  h+='</select>';
+  h+='<button class="btn-color-toggle" id="btn-colors">'+(colorSettingsOpen?'Hide Colors':'Assignee Colors')+'</button>';
+  h+='</div>';
 
   // Tasks
   h+='<div class="task-list">';
@@ -432,7 +490,10 @@ function renderPanel(){
     h+='<div class="task-body"><div class="task-row">';
     h+='<span class="task-name">'+esc(t.text)+'</span>';
     h+='<span class="badge '+t.priority+'">'+t.priority.charAt(0).toUpperCase()+t.priority.slice(1)+'</span>';
-    if(t.owner) h+='<span class="assignee-pill '+assigneeClass(t.owner)+'">'+esc(t.owner)+'</span>';
+    if(t.owner) {
+      const ac=assigneeClass(t.owner), as=assigneeStyle(t.owner);
+      h+='<span class="assignee-pill '+ac+'"'+(as?' style="'+as+'"':'')+'>'+esc(t.owner)+'</span>';
+    }
     h+=dueBadge(t.dueDate);
     h+='</div>';
     if(t.detail) h+='<div class="task-detail">'+esc(t.detail)+'</div>';
@@ -518,6 +579,16 @@ function bind(){
       dueDate:document.getElementById('new-due').value,
     });
     render();
+  });
+
+  // Color settings toggle + pickers
+  const cb=document.getElementById('btn-colors');
+  if(cb) cb.addEventListener('click',()=>{ colorSettingsOpen=!colorSettingsOpen; render(); });
+  document.querySelectorAll('.color-pick').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      assigneeColors[sel.dataset.person]=sel.value;
+      render();
+    });
   });
 
   // Edit / Delete project buttons
