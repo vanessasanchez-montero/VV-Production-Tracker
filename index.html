@@ -119,9 +119,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .badge.due-soon { background: #fffbeb; color: #b45309; }
 .badge.due-future { background: #eff6ff; color: #2563eb; }
 .assignee-pill {
-  font-size: 10px; font-weight: 500; padding: 2px 10px; border-radius: 12px;
-  background: #f3f4f6; color: var(--vv-muted); white-space: nowrap;
+  font-size: 10px; font-weight: 600; padding: 2px 10px; border-radius: 12px;
+  white-space: nowrap;
 }
+.assignee-pill.assignee-vanessa { background: #fef2f2; color: #dc2626; }
+.assignee-pill.assignee-alfred { background: #eff6ff; color: #1d4ed8; }
+.assignee-pill.assignee-kathy { background: #f0fdf4; color: #15803d; }
+.assignee-pill.assignee-alberto { background: #faf5ff; color: #7c3aed; }
+.assignee-pill.assignee-default { background: #f3f4f6; color: #6b7280; }
 .task-detail { font-size: 12px; color: var(--vv-muted); margin-top: 4px; }
 .task-actions { display: flex; gap: 4px; flex-shrink: 0; margin-top: 2px; }
 .btn-sm {
@@ -168,6 +173,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   padding: 6px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
 }
 
+.tab-add {
+  background: none; border: 2px dashed var(--vv-border); border-bottom: none;
+  border-radius: 10px 10px 0 0; padding: 10px 18px 8px; cursor: pointer;
+  font-size: 18px; font-weight: 600; color: var(--vv-muted); transition: all .15s;
+}
+.tab-add:hover { color: var(--vv-dark); background: var(--vv-card); border-style: solid; }
+.btn-edit-project {
+  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
+  padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
+}
+.btn-edit-project:hover { background: #f3f3f3; color: var(--vv-dark); }
+.btn-delete-project {
+  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
+  padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
+}
+.btn-delete-project:hover { background: #fef2f2; color: var(--vv-red); }
+.proj-form {
+  margin-bottom: 16px; padding: 16px; border: 1px solid var(--vv-border);
+  border-radius: 8px; background: #fafbfc; display: flex; flex-direction: column; gap: 8px;
+}
+.proj-form .edit-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.proj-form label { font-size: 11px; color: var(--vv-muted); font-weight: 600; min-width: 80px; }
+.proj-form input, .proj-form select {
+  padding: 6px 10px; border: 1px solid var(--vv-border); border-radius: 6px;
+  font-size: 12px; font-family: inherit; flex: 1;
+}
 .empty-msg { text-align: center; padding: 30px; color: var(--vv-muted); font-size: 13px; }
 
 .footer {
@@ -244,6 +275,9 @@ let editingTaskId = null;
 
 /* ===== HELPERS ===== */
 function gid(){ return 't-'+Date.now()+'-'+Math.random().toString(36).slice(2,7); }
+
+const ASSIGNEE_COLORS = { vanessa:'assignee-vanessa', alfred:'assignee-alfred', kathy:'assignee-kathy', alberto:'assignee-alberto' };
+function assigneeClass(name){ return ASSIGNEE_COLORS[(name||'').toLowerCase()] || 'assignee-default'; }
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function daysUntil(ds){
@@ -311,6 +345,7 @@ function sortTasks(ts){
       case 'due-desc': if(!a.dueDate&&!b.dueDate) return 0; if(!a.dueDate) return 1; if(!b.dueDate) return -1; return b.dueDate.localeCompare(a.dueDate);
       case 'priority': return (pv[a.priority]||1)-(pv[b.priority]||1);
       case 'name': return a.text.localeCompare(b.text);
+      case 'assignee': return (a.owner||'zzz').localeCompare(b.owner||'zzz');
       default: return 0;
     }
   });
@@ -343,6 +378,13 @@ function renderTabs(){
     btn.addEventListener('click',()=>{ activeProject=p.id; editingTaskId=null; render(); });
     bar.appendChild(btn);
   });
+  // + New Project button
+  const addBtn=document.createElement('button');
+  addBtn.className='tab-add';
+  addBtn.textContent='+';
+  addBtn.title='Add new project';
+  addBtn.addEventListener('click', showNewProjectForm);
+  bar.appendChild(addBtn);
 }
 
 /* ===== PANEL ===== */
@@ -360,7 +402,10 @@ function renderPanel(){
   if(proj.phase) bt=proj.phase+' &middot; '+bt;
 
   let h='';
-  h+='<div class="proj-header"><span class="proj-title">'+esc(proj.label)+'</span><span class="shoot-badge '+u+'">'+bt+'</span></div>';
+  h+='<div class="proj-header"><span class="proj-title">'+esc(proj.label)+'</span><span class="shoot-badge '+u+'">'+bt+'</span>'
+    +'<button class="btn-edit-project" id="btn-edit-proj">Edit Project</button>'
+    +'<button class="btn-delete-project" id="btn-delete-proj">Delete</button></div>';
+  h+='<div id="proj-form-slot"></div>';
 
   // Toolbar
   h+='<div class="toolbar">';
@@ -374,6 +419,7 @@ function renderPanel(){
   h+='<option value="due-desc"'+(currentSort==='due-desc'?' selected':'')+'>Due Date (latest)</option>';
   h+='<option value="priority"'+(currentSort==='priority'?' selected':'')+'>Priority</option>';
   h+='<option value="name"'+(currentSort==='name'?' selected':'')+'>Name</option>';
+  h+='<option value="assignee"'+(currentSort==='assignee'?' selected':'')+'>Assignee</option>';
   h+='</select></div>';
 
   // Tasks
@@ -386,7 +432,7 @@ function renderPanel(){
     h+='<div class="task-body"><div class="task-row">';
     h+='<span class="task-name">'+esc(t.text)+'</span>';
     h+='<span class="badge '+t.priority+'">'+t.priority.charAt(0).toUpperCase()+t.priority.slice(1)+'</span>';
-    if(t.owner) h+='<span class="assignee-pill">'+esc(t.owner)+'</span>';
+    if(t.owner) h+='<span class="assignee-pill '+assigneeClass(t.owner)+'">'+esc(t.owner)+'</span>';
     h+=dueBadge(t.dueDate);
     h+='</div>';
     if(t.detail) h+='<div class="task-detail">'+esc(t.detail)+'</div>';
@@ -473,6 +519,89 @@ function bind(){
     });
     render();
   });
+
+  // Edit / Delete project buttons
+  const ep=document.getElementById('btn-edit-proj');
+  if(ep) ep.addEventListener('click',()=>{
+    const proj=projects.find(p=>p.id===activeProject);
+    if(proj) showEditProjectForm(proj);
+  });
+  const dp=document.getElementById('btn-delete-proj');
+  if(dp) dp.addEventListener('click',()=>{
+    const proj=projects.find(p=>p.id===activeProject);
+    if(!proj) return;
+    if(!confirm('Delete project "'+proj.label+'" and all its tasks?')) return;
+    const idx=projects.findIndex(p=>p.id===proj.id);
+    if(idx>-1) projects.splice(idx,1);
+    delete taskData[proj.id];
+    activeProject=projects.length>0?projects[0].id:'';
+    render();
+  });
+}
+
+/* ===== NEW PROJECT FORM ===== */
+function showNewProjectForm(){
+  const panel=document.getElementById('panel');
+  const colors=['#E4002B','#2563eb','#d4930d','#7c3aed','#0891b2','#2d8a56','#e85d04','#6366f1'];
+  panel.innerHTML=
+    '<div class="proj-form">'+
+    '<h3 style="font-size:15px;margin-bottom:4px;">New Project</h3>'+
+    '<div class="edit-row"><label>Name</label><input type="text" id="np-name" placeholder="Project name"></div>'+
+    '<div class="edit-row"><label>Shoot Date</label><input type="date" id="np-shoot"></div>'+
+    '<div class="edit-row"><label>Phase</label><input type="text" id="np-phase" placeholder="e.g. Pre-Production (optional)"></div>'+
+    '<div class="edit-row"><label>Color</label><select id="np-color">'+
+    colors.map(c=>'<option value="'+c+'" style="color:'+c+'">'+c+'</option>').join('')+
+    '</select></div>'+
+    '<div class="edit-actions"><button class="btn-save" id="np-save">Create Project</button><button class="btn-cancel" id="np-cancel">Cancel</button></div>'+
+    '</div>';
+  document.getElementById('np-save').addEventListener('click',()=>{
+    const name=document.getElementById('np-name').value.trim();
+    if(!name) return;
+    const id='proj-'+Date.now();
+    projects.push({
+      id:id, label:name, color:document.getElementById('np-color').value,
+      shootDate:document.getElementById('np-shoot').value,
+      phase:document.getElementById('np-phase').value.trim(),
+    });
+    // Sort projects by shoot date
+    projects.sort((a,b)=>{
+      if(!a.shootDate&&!b.shootDate) return 0;
+      if(!a.shootDate) return 1; if(!b.shootDate) return -1;
+      return a.shootDate.localeCompare(b.shootDate);
+    });
+    taskData[id]=[];
+    activeProject=id;
+    render();
+  });
+  document.getElementById('np-cancel').addEventListener('click',()=>render());
+}
+
+/* ===== EDIT PROJECT FORM ===== */
+function showEditProjectForm(proj){
+  const slot=document.getElementById('proj-form-slot');
+  if(!slot) return;
+  slot.innerHTML=
+    '<div class="proj-form">'+
+    '<h3 style="font-size:15px;margin-bottom:4px;">Edit Project</h3>'+
+    '<div class="edit-row"><label>Name</label><input type="text" id="ep-name" value="'+esc(proj.label)+'"></div>'+
+    '<div class="edit-row"><label>Shoot Date</label><input type="date" id="ep-shoot" value="'+(proj.shootDate||'')+'"></div>'+
+    '<div class="edit-row"><label>Phase</label><input type="text" id="ep-phase" value="'+esc(proj.phase||'')+'"></div>'+
+    '<div class="edit-actions"><button class="btn-save" id="ep-save">Save</button><button class="btn-cancel" id="ep-cancel">Cancel</button></div>'+
+    '</div>';
+  document.getElementById('ep-save').addEventListener('click',()=>{
+    const name=document.getElementById('ep-name').value.trim();
+    if(!name) return;
+    proj.label=name;
+    proj.shootDate=document.getElementById('ep-shoot').value;
+    proj.phase=document.getElementById('ep-phase').value.trim();
+    projects.sort((a,b)=>{
+      if(!a.shootDate&&!b.shootDate) return 0;
+      if(!a.shootDate) return 1; if(!b.shootDate) return -1;
+      return a.shootDate.localeCompare(b.shootDate);
+    });
+    render();
+  });
+  document.getElementById('ep-cancel').addEventListener('click',()=>render());
 }
 
 /* ===== RENDER ===== */
