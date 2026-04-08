@@ -5,754 +5,994 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VV Production Task Tracker</title>
 <style>
-:root {
-  --vv-red: #E4002B;
-  --vv-dark: #1a1a2e;
-  --vv-purple: #2d1b4e;
-  --vv-bg: #f4f5f7;
-  --vv-card: #ffffff;
-  --vv-border: #e2e4e9;
-  --vv-text: #1a1a2e;
-  --vv-muted: #6b7280;
-  --vv-green: #16a34a;
-  --vv-amber: #d97706;
-  --vv-blue: #2563eb;
-  --radius: 10px;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--vv-bg); color: var(--vv-text); min-height: 100vh; }
+  :root {
+    --vv-red: #E4002B;
+    --vv-dark: #1a1a2e;
+    --vv-bg: #f8f7f4;
+    --vv-card: #ffffff;
+    --vv-border: #e5e5e5;
+    --vv-text: #2c2c2c;
+    --vv-muted: #6b6b6b;
+    --vv-green: #2d8a56;
+    --vv-amber: #d4930d;
+    --vv-blue: #2563eb;
+    --vv-purple: #7c3aed;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--vv-bg); color: var(--vv-text); line-height: 1.6; padding: 24px; }
+  .container { max-width: 920px; margin: 0 auto; }
+  .hidden { display: none !important; }
 
-.header {
-  background: linear-gradient(135deg, var(--vv-dark), var(--vv-purple));
-  color: #fff; padding: 28px 32px 22px;
-}
-.header h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
-.header .subtitle { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+  /* Lock screen */
+  #lock-screen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, var(--vv-dark) 0%, #2d1b4e 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
+  }
+  #lock-screen h2 { color: #fff; font-size: 22px; margin-bottom: 6px; }
+  #lock-screen p { color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 20px; }
+  #lock-screen input {
+    padding: 10px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1);
+    color: #fff; font-size: 14px; width: 260px; outline: none; font-family: inherit;
+  }
+  #lock-screen input::placeholder { color: rgba(255,255,255,0.4); }
+  #lock-screen input:focus { border-color: rgba(255,255,255,0.5); }
+  #lock-screen button {
+    margin-top: 10px; padding: 9px 28px; border-radius: 8px; border: none;
+    background: var(--vv-red); color: #fff; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  #lock-screen button:hover { opacity: 0.9; }
+  #lock-error { color: #ff6b6b; font-size: 12px; margin-top: 8px; min-height: 16px; }
 
-.dashboard { display: flex; gap: 14px; padding: 18px 32px; flex-wrap: wrap; }
-.dash-card {
-  background: var(--vv-card); border-radius: var(--radius); padding: 14px 20px;
-  min-width: 130px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  border-left: 4px solid var(--vv-border);
-}
-.dash-card.total { border-left-color: var(--vv-blue); }
-.dash-card.done { border-left-color: var(--vv-green); }
-.dash-card.overdue-card { border-left-color: var(--vv-red); }
-.dash-card.week { border-left-color: var(--vv-amber); }
-.dash-num { font-size: 26px; font-weight: 700; }
-.dash-label { font-size: 11px; color: var(--vv-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  #app-content { display: none; }
+  #app-content.unlocked { display: block; }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; }
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--vv-dark) 0%, #2d1b4e 100%);
+    color: white; padding: 28px 32px; border-radius: 16px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .header h1 { font-size: 24px; font-weight: 700; }
+  .header .subtitle { font-size: 14px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+  .header-right { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .header-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat-pill { background: rgba(255,255,255,0.12); padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.9); }
+  .stat-pill.done { background: rgba(45,138,86,0.35); }
+  .stat-pill.remaining { background: rgba(228,0,43,0.3); }
 
-.tab-bar { display: flex; gap: 6px; padding: 8px 0 0; overflow-x: auto; flex-wrap: wrap; }
-.tab {
-  background: var(--vv-card); border: 1px solid var(--vv-border); border-bottom: none;
-  border-radius: 10px 10px 0 0; padding: 10px 18px 8px; cursor: pointer;
-  font-size: 13px; font-weight: 600; color: var(--vv-muted); transition: all .15s;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 120px;
-}
-.tab:hover { background: #f0f0f5; }
-.tab.active { background: var(--vv-card); color: var(--vv-text); border-color: var(--vv-border); box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; }
-.tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--vv-card); }
-.tab-top { display: flex; align-items: center; gap: 6px; }
-.tab-count {
-  background: var(--vv-red); color: #fff; font-size: 10px; font-weight: 700;
-  border-radius: 10px; padding: 1px 7px; min-width: 18px; text-align: center;
-}
-.tab-count.zero { background: var(--vv-green); }
-.tab-date { font-size: 10px; font-weight: 400; color: var(--vv-muted); }
-.tab-date.urgent { color: var(--vv-red); font-weight: 600; }
-.tab-date.soon { color: var(--vv-amber); }
+  /* Sync bar */
+  .sync-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 12px; color: var(--vv-muted);
+  }
+  #sync-btn {
+    padding: 4px 12px; border-radius: 14px; border: 1px solid var(--vv-border); background: var(--vv-card);
+    font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
+  }
+  #sync-btn:hover { background: #f0f0f0; color: var(--vv-dark); }
+  .color-toggle-btn {
+    padding: 4px 12px; border-radius: 14px; border: 1px solid var(--vv-border); background: var(--vv-card);
+    font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
+  }
+  .color-toggle-btn:hover { background: #f0f0f0; color: var(--vv-dark); }
 
-.panel {
-  background: var(--vv-card); border: 1px solid var(--vv-border);
-  border-radius: 0 var(--radius) var(--radius) var(--radius);
-  padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
+  /* Assignee color settings */
+  .color-settings {
+    background: var(--vv-card); border: 1px solid var(--vv-border); border-radius: 10px;
+    padding: 14px 18px; margin-bottom: 14px;
+  }
+  .color-settings h4 { font-size: 13px; margin-bottom: 8px; color: var(--vv-dark); }
+  .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .color-row span { font-size: 13px; min-width: 70px; }
+  .color-row select { padding: 3px 8px; border-radius: 6px; border: 1px solid var(--vv-border); font-size: 12px; font-family: inherit; }
 
-.proj-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.proj-title { font-size: 18px; font-weight: 700; }
-.shoot-badge {
-  font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
-  display: inline-flex; align-items: center; gap: 4px;
-}
-.shoot-badge.urgent { background: #fef2f2; color: var(--vv-red); }
-.shoot-badge.soon { background: #fffbeb; color: var(--vv-amber); }
-.shoot-badge.future { background: #eff6ff; color: var(--vv-blue); }
-.shoot-badge.no-date { background: #f3f4f6; color: var(--vv-muted); }
+  /* Global progress */
+  .global-progress { background: var(--vv-card); border-radius: 12px; padding: 14px 24px; margin-bottom: 16px; border: 1px solid var(--vv-border); display: flex; align-items: center; gap: 14px; }
+  .progress-bar-outer { flex: 1; background: #f0f0f0; border-radius: 8px; height: 10px; overflow: hidden; }
+  .progress-bar-inner { height: 100%; background: linear-gradient(90deg, var(--vv-green), #34d399); border-radius: 8px; transition: width 0.4s ease; }
+  .progress-label { font-size: 14px; font-weight: 600; min-width: 50px; text-align: right; }
 
-.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
-.filter-btn {
-  background: #f3f4f6; border: 1px solid var(--vv-border); border-radius: 8px;
-  padding: 6px 14px; font-size: 12px; cursor: pointer; font-weight: 500;
-  transition: all .15s; color: var(--vv-muted);
-}
-.filter-btn:hover { background: #e5e7eb; }
-.filter-btn.active { background: var(--vv-dark); color: #fff; border-color: var(--vv-dark); }
-.sort-select {
-  margin-left: auto; padding: 6px 12px; border: 1px solid var(--vv-border);
-  border-radius: 8px; font-size: 12px; background: #fff; font-family: inherit;
-}
-.search-box {
-  padding: 7px 12px; border: 1px solid var(--vv-border); border-radius: 8px;
-  font-size: 12px; width: 180px; font-family: inherit;
-}
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 0; flex-wrap: wrap; align-items: flex-end; }
+  .tab {
+    padding: 8px 16px; border-radius: 10px 10px 0 0; border: 1px solid var(--vv-border); border-bottom: none;
+    background: var(--vv-card); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    color: var(--vv-muted); transition: all 0.15s; position: relative; top: 1px; text-align: left;
+  }
+  .tab:hover { color: var(--vv-dark); }
+  .tab.active { background: var(--vv-card); color: var(--vv-dark); border-bottom: 2px solid var(--vv-card); z-index: 2; }
+  .tab .tab-count {
+    display: inline-block; background: #f0f0f0; color: var(--vv-muted);
+    font-size: 11px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 700;
+  }
+  .tab.active .tab-count { background: var(--vv-dark); color: white; }
+  .tab .tab-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px; }
+  .tab-date { display: block; font-size: 10px; font-weight: 500; color: var(--vv-muted); margin-top: 1px; }
+  .tab.active .tab-date { color: var(--vv-muted); }
+  .tab-date.urgent { color: var(--vv-red); font-weight: 700; }
+  .tab-date.soon { color: var(--vv-amber); font-weight: 600; }
+  .tab-add {
+    padding: 8px 14px; border-radius: 10px 10px 0 0; border: 1px dashed var(--vv-border); border-bottom: none;
+    background: transparent; font-size: 18px; font-weight: 400; cursor: pointer; font-family: inherit;
+    color: var(--vv-muted); transition: all 0.15s; position: relative; top: 1px; line-height: 1;
+  }
+  .tab-add:hover { color: var(--vv-dark); background: var(--vv-card); border-style: solid; }
 
-.task-list { display: flex; flex-direction: column; gap: 6px; }
-.task-item {
-  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
-  border: 1px solid var(--vv-border); border-radius: 8px; transition: all .15s; background: #fff;
-}
-.task-item:hover { border-color: #c7c9d1; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.task-item.done { opacity: 0.55; }
-.task-item.done .task-name { text-decoration: line-through; }
-.task-check { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--vv-green); cursor: pointer; flex-shrink: 0; }
-.task-body { flex: 1; min-width: 0; }
-.task-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.task-name { font-size: 14px; font-weight: 500; }
-.badge { font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 12px; white-space: nowrap; }
-.badge.high { background: #fef2f2; color: #dc2626; }
-.badge.medium { background: #fffbeb; color: #b45309; }
-.badge.low { background: #f0fdf4; color: #15803d; }
-.badge.overdue { background: #dc2626; color: #fff; }
-.badge.due-today { background: #fef2f2; color: #dc2626; }
-.badge.due-soon { background: #fffbeb; color: #b45309; }
-.badge.due-future { background: #eff6ff; color: #2563eb; }
-.assignee-pill {
-  font-size: 10px; font-weight: 600; padding: 2px 10px; border-radius: 12px;
-  white-space: nowrap;
-}
-.assignee-pill.assignee-default { background: #f3f4f6; color: #6b7280; }
-.color-settings {
-  margin-bottom: 16px; padding: 14px; border: 1px solid var(--vv-border);
-  border-radius: 8px; background: #fafbfc; display: none;
-}
-.color-settings.open { display: block; }
-.color-settings h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
-.color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.color-row label { font-size: 12px; min-width: 70px; font-weight: 500; }
-.color-row select { padding: 5px 8px; border: 1px solid var(--vv-border); border-radius: 6px; font-size: 12px; font-family: inherit; }
-.color-swatch { width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-right: 4px; }
-.btn-color-toggle {
-  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
-  padding: 4px 12px; font-size: 11px; cursor: pointer; color: var(--vv-muted); margin-left: auto;
-}
-.btn-color-toggle:hover { background: #f3f4f6; color: var(--vv-text); }
-.task-detail { font-size: 12px; color: var(--vv-muted); margin-top: 4px; }
-.task-actions { display: flex; gap: 4px; flex-shrink: 0; margin-top: 2px; }
-.btn-sm {
-  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
-  padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--vv-muted); transition: all .12s;
-}
-.btn-sm:hover { background: #f3f4f6; color: var(--vv-text); }
-.btn-sm.del:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+  /* Project header bar */
+  .project-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .project-title { font-size: 18px; font-weight: 700; }
+  .shoot-date-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600;
+  }
+  .shoot-date-badge.urgent { background: #fef2f2; color: var(--vv-red); }
+  .shoot-date-badge.soon { background: #fffbeb; color: var(--vv-amber); }
+  .shoot-date-badge.future { background: #eff6ff; color: var(--vv-blue); }
+  .shoot-date-badge.no-date { background: #f3f3f3; color: var(--vv-muted); }
+  .btn-edit-project {
+    margin-left: auto; background: none; border: 1px solid var(--vv-border); border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
+  }
+  .btn-edit-project:hover { background: #f3f3f3; color: var(--vv-dark); }
+  .btn-delete-project { background: none; border: 1px solid var(--vv-border); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted); }
+  .btn-delete-project:hover { background: #fef2f2; color: var(--vv-red); }
 
-.add-form {
-  margin-top: 16px; padding: 14px; border: 1px dashed var(--vv-border);
-  border-radius: 8px; background: #fafbfc;
-}
-.add-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.add-row input, .add-row select {
-  padding: 7px 10px; border: 1px solid var(--vv-border); border-radius: 8px;
-  font-size: 12px; font-family: inherit;
-}
-.add-row input[type="text"] { flex: 1; min-width: 180px; }
-.btn-add {
-  background: var(--vv-red); color: #fff; border: none; border-radius: 8px;
-  padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s;
-}
-.btn-add:hover { background: #c50025; }
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-btn {
+    padding: 5px 12px; border-radius: 16px; border: 1px solid var(--vv-border); background: var(--vv-card);
+    font-size: 12px; cursor: pointer; font-family: inherit; color: var(--vv-muted); transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--vv-dark); color: var(--vv-dark); }
+  .filter-btn.active { background: var(--vv-dark); color: white; border-color: var(--vv-dark); }
+  .sort-select {
+    padding: 5px 10px; border-radius: 16px; border: 1px solid var(--vv-border); background: var(--vv-card);
+    font-size: 12px; font-family: inherit; cursor: pointer; outline: none; color: var(--vv-muted);
+  }
+  .sort-select:focus { border-color: var(--vv-blue); }
+  .sort-label { font-size: 11px; color: var(--vv-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .filter-search {
+    margin-left: auto; padding: 5px 12px; border-radius: 16px; border: 1px solid var(--vv-border);
+    font-size: 12px; font-family: inherit; outline: none; width: 180px;
+  }
+  .filter-search:focus { border-color: var(--vv-blue); }
 
-.edit-form {
-  margin-top: 8px; padding: 14px; border: 1px solid var(--vv-border);
-  border-radius: 8px; background: #fafbfc; display: flex; flex-direction: column; gap: 8px;
-}
-.edit-form .edit-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.edit-form label { font-size: 11px; color: var(--vv-muted); font-weight: 600; min-width: 60px; }
-.edit-form input, .edit-form select, .edit-form textarea {
-  padding: 6px 10px; border: 1px solid var(--vv-border); border-radius: 6px;
-  font-size: 12px; font-family: inherit; flex: 1;
-}
-.edit-form textarea { resize: vertical; min-height: 50px; }
-.edit-actions { display: flex; gap: 8px; margin-top: 4px; }
-.btn-save {
-  background: var(--vv-green); color: #fff; border: none; border-radius: 6px;
-  padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
-}
-.btn-cancel {
-  background: #e5e7eb; color: var(--vv-text); border: none; border-radius: 6px;
-  padding: 6px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
-}
+  /* Section */
+  .section { background: var(--vv-card); border-radius: 0 12px 12px 12px; padding: 24px; margin-bottom: 16px; border: 1px solid var(--vv-border); }
 
-.tab-add {
-  background: none; border: 2px dashed var(--vv-border); border-bottom: none;
-  border-radius: 10px 10px 0 0; padding: 10px 18px 8px; cursor: pointer;
-  font-size: 18px; font-weight: 600; color: var(--vv-muted); transition: all .15s;
-}
-.tab-add:hover { color: var(--vv-dark); background: var(--vv-card); border-style: solid; }
-.btn-edit-project {
-  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
-  padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
-}
-.btn-edit-project:hover { background: #f3f3f3; color: var(--vv-dark); }
-.btn-delete-project {
-  background: none; border: 1px solid var(--vv-border); border-radius: 6px;
-  padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; color: var(--vv-muted);
-}
-.btn-delete-project:hover { background: #fef2f2; color: var(--vv-red); }
-.proj-form {
-  margin-bottom: 16px; padding: 16px; border: 1px solid var(--vv-border);
-  border-radius: 8px; background: #fafbfc; display: flex; flex-direction: column; gap: 8px;
-}
-.proj-form .edit-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.proj-form label { font-size: 11px; color: var(--vv-muted); font-weight: 600; min-width: 80px; }
-.proj-form input, .proj-form select {
-  padding: 6px 10px; border: 1px solid var(--vv-border); border-radius: 6px;
-  font-size: 12px; font-family: inherit; flex: 1;
-}
-.empty-msg { text-align: center; padding: 30px; color: var(--vv-muted); font-size: 13px; }
+  /* Task list */
+  .task-list { list-style: none; }
+  .task-item { padding: 11px 0; border-bottom: 1px solid var(--vv-border); transition: opacity 0.3s ease; }
+  .task-item:last-child { border-bottom: none; }
+  .task-row { display: flex; align-items: flex-start; gap: 10px; }
+  .task-item.completed > .task-row { opacity: 0.4; }
+  .task-item.completed > .task-row .task-text strong { text-decoration: line-through; color: var(--vv-muted); }
+  .task-list input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; margin-top: 3px; cursor: pointer; accent-color: var(--vv-green); }
+  .task-text { flex: 1; }
+  .task-text strong { color: var(--vv-dark); font-size: 14px; }
+  .task-meta { font-size: 12px; color: var(--vv-muted); margin-top: 2px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .owner-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .due-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .due-badge.overdue { background: #fef2f2; color: var(--vv-red); }
+  .due-badge.due-today { background: #fef2f2; color: var(--vv-red); }
+  .due-badge.due-soon { background: #fffbeb; color: var(--vv-amber); }
+  .due-badge.due-future { background: #eff6ff; color: var(--vv-blue); }
+  .priority-high { color: var(--vv-red); font-weight: 600; }
+  .priority-medium { color: var(--vv-amber); font-weight: 600; }
+  .priority-low { color: var(--vv-green); font-weight: 600; }
 
-.footer {
-  text-align: center; padding: 20px; font-size: 11px; color: var(--vv-muted);
-  border-top: 1px solid var(--vv-border); margin-top: 30px;
-}
+  /* Hover actions */
+  .task-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity 0.2s; flex-shrink: 0; }
+  .task-row:hover .task-actions { opacity: 1; }
+  .btn-icon { background: none; border: 1px solid var(--vv-border); border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 6px; color: var(--vv-muted); transition: all 0.15s; font-family: inherit; }
+  .btn-icon:hover { background: #f3f3f3; color: var(--vv-dark); }
+  .btn-icon.delete:hover { background: #fef2f2; color: var(--vv-red); }
 
-/* Password gate */
-.lock-screen {
-  position: fixed; inset: 0; z-index: 9999;
-  background: linear-gradient(135deg, var(--vv-dark), var(--vv-purple));
-  display: flex; align-items: center; justify-content: center; flex-direction: column;
-}
-.lock-screen.hidden { display: none; }
-.lock-box {
-  background: #fff; border-radius: 16px; padding: 40px 36px 32px; text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 380px; width: 90%;
-}
-.lock-box h2 { font-size: 18px; font-weight: 700; color: var(--vv-dark); margin-bottom: 6px; }
-.lock-box p { font-size: 13px; color: var(--vv-muted); margin-bottom: 20px; }
-.lock-box input {
-  width: 100%; padding: 12px 16px; border: 2px solid var(--vv-border); border-radius: 10px;
-  font-size: 14px; font-family: inherit; text-align: center; outline: none;
-  transition: border-color .2s;
-}
-.lock-box input:focus { border-color: var(--vv-purple); }
-.lock-box .lock-btn {
-  width: 100%; margin-top: 12px; padding: 12px; background: var(--vv-dark); color: #fff;
-  border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: background .15s;
-}
-.lock-box .lock-btn:hover { background: var(--vv-purple); }
-.lock-error { color: #dc2626; font-size: 12px; margin-top: 8px; min-height: 18px; }
-.app-content { display: none; }
-.app-content.unlocked { display: block; }
+  /* Inline edit form */
+  .edit-form { background: #fafafa; border: 1px solid var(--vv-blue); border-radius: 10px; padding: 14px; margin-top: 8px; }
+  .edit-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .edit-form-grid.full { grid-template-columns: 1fr; }
+  .edit-field label { display: block; font-size: 11px; font-weight: 600; color: var(--vv-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .edit-field input[type="text"], .edit-field input[type="date"], .edit-field select {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--vv-border); border-radius: 6px;
+    font-size: 13px; font-family: inherit; outline: none; background: white;
+  }
+  .edit-field input:focus, .edit-field select:focus { border-color: var(--vv-blue); }
+  .edit-btns { display: flex; gap: 6px; margin-top: 10px; }
+  .btn-save { padding: 6px 16px; background: var(--vv-blue); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-save:hover { opacity: 0.9; }
+  .btn-cancel { padding: 6px 16px; background: #f0f0f0; color: var(--vv-muted); border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .btn-cancel:hover { background: #e5e5e5; }
+
+  /* Add task form */
+  .add-form { background: #fafafa; border: 1px dashed var(--vv-border); border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .add-form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .add-form-row:last-child { margin-bottom: 0; }
+  .add-form input[type="text"], .add-form input[type="date"] { flex: 1; min-width: 120px; padding: 7px 12px; border: 1px solid var(--vv-border); border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; }
+  .add-form input[type="text"]:focus, .add-form input[type="date"]:focus { border-color: var(--vv-blue); }
+  .add-form select { padding: 7px 10px; border: 1px solid var(--vv-border); border-radius: 8px; font-size: 12px; font-family: inherit; outline: none; background: white; cursor: pointer; }
+  .btn-add { padding: 7px 16px; background: var(--vv-dark); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; transition: background 0.2s; }
+  .btn-add:hover { background: #2d1b4e; }
+
+  /* New project inline form */
+  .new-project-form { background: var(--vv-card); border: 1px solid var(--vv-blue); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .new-project-form h3 { font-size: 15px; margin-bottom: 10px; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--vv-muted); font-size: 14px; }
+  .footer { text-align: center; font-size: 12px; color: var(--vv-muted); margin-top: 12px; padding: 8px; }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .header { padding: 20px; }
+    .header h1 { font-size: 20px; }
+    .filter-search { width: 100%; margin-left: 0; }
+    .tab { padding: 6px 10px; font-size: 12px; }
+  }
 </style>
 </head>
 <body>
 
-<!-- Password gate -->
-<div class="lock-screen" id="lock-screen">
-  <div class="lock-box">
-    <h2>VV Production Tracker</h2>
-    <p>Enter the team password to continue</p>
-    <input type="password" id="lock-input" placeholder="Password" autocomplete="off">
-    <button class="lock-btn" id="lock-btn">Enter</button>
-    <div class="lock-error" id="lock-error"></div>
-  </div>
+<!-- ====== PASSWORD GATE ====== -->
+<div id="lock-screen">
+  <h2>VV Production Tracker</h2>
+  <p>Enter the team password to continue</p>
+  <input type="password" id="lock-input" placeholder="Password">
+  <button id="lock-btn">Enter</button>
+  <div id="lock-error"></div>
 </div>
 
-<div class="app-content" id="app-content">
-<div class="header">
-  <h1>VV Production Task Tracker</h1>
-  <div class="subtitle">Shared Team Board &middot; Snapshot from Apr 2, 2026</div>
-</div>
-
-<div class="dashboard">
-  <div class="dash-card total"><div class="dash-num" id="d-total">0</div><div class="dash-label">Total Tasks</div></div>
-  <div class="dash-card done"><div class="dash-num" id="d-done">0</div><div class="dash-label">Completed</div></div>
-  <div class="dash-card overdue-card"><div class="dash-num" id="d-overdue">0</div><div class="dash-label">Overdue</div></div>
-  <div class="dash-card week"><div class="dash-num" id="d-week">0</div><div class="dash-label">Due This Week</div></div>
-</div>
-
+<!-- ====== APP ====== -->
+<div id="app-content">
 <div class="container">
-  <div class="tab-bar" id="tab-bar"></div>
-  <div class="panel" id="panel"></div>
+  <div class="header">
+    <div>
+      <h1>VV Production Task Tracker</h1>
+      <div class="subtitle">Virgin Voyages &middot; Production Team</div>
+    </div>
+    <div class="header-right">
+      <div class="header-stats">
+        <span class="stat-pill done" id="stat-done">0 done</span>
+        <span class="stat-pill remaining" id="stat-remaining">0 remaining</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync bar -->
+  <div class="sync-bar">
+    <button id="sync-btn" onclick="fetchAll()">Refresh</button>
+    <span id="sync-msg">Not connected</span>
+    <button class="color-toggle-btn" onclick="toggleColorSettings()">Assignee Colors</button>
+  </div>
+
+  <div id="color-settings-container"></div>
+
+  <div class="global-progress">
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">0%</div>
+  </div>
+
+  <div class="tabs" id="tab-bar"></div>
+  <div id="new-project-container"></div>
+
+  <div class="section" id="main-section">
+    <div class="project-header" id="project-header"></div>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="pending">Pending</button>
+      <button class="filter-btn" data-filter="done">Completed</button>
+      <button class="filter-btn" data-filter="high">High Priority</button>
+      <button class="filter-btn" data-filter="overdue">Overdue</button>
+      <span class="sort-label">Sort:</span>
+      <select class="sort-select" id="sort-select">
+        <option value="due-asc">Due Date (soonest)</option>
+        <option value="due-desc">Due Date (latest)</option>
+        <option value="priority">Priority</option>
+        <option value="assignee">Assignee</option>
+        <option value="name">Name (A-Z)</option>
+        <option value="created">Newest First</option>
+      </select>
+      <input type="text" class="filter-search" id="search-input" placeholder="Search tasks...">
+    </div>
+    <ul class="task-list" id="task-list"></ul>
+    <div class="add-form">
+      <div class="add-form-row">
+        <input type="text" id="new-task" placeholder="New task name...">
+        <select id="new-priority"><option value="High">High</option><option value="Medium" selected>Medium</option><option value="Low">Low</option></select>
+        <select id="new-assignee"><option value="">Assignee...</option><option>Alfred</option><option>Vanessa</option><option>Kathy</option><option>Alberto</option></select>
+        <input type="date" id="new-due" title="Due date" style="max-width:150px;">
+        <button class="btn-add" id="add-task-btn">+ Add Task</button>
+      </div>
+      <div class="add-form-row">
+        <input type="text" id="new-detail" placeholder="Details / notes (optional)" style="flex:1;">
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">VV Production Task Tracker &middot; Shared team board &middot; Synced with Airtable</div>
+</div>
 </div>
 
-<div class="footer">VV Production Task Tracker &middot; Shared team board &middot; Last updated Apr 2, 2026</div>
-</div><!-- end app-content -->
-
+<!-- ====== PASSWORD GATE SCRIPT ====== -->
 <script>
-/* ===== PASSWORD GATE ===== */
-// To change the password, update the value inside checkPassword below
 function checkPassword(input) {
-  // ---- CHANGE YOUR PASSWORD HERE ----
   return input === 'VVproduction2026';
-  // ------------------------------------
 }
-
 function unlock() {
   document.getElementById('lock-screen').classList.add('hidden');
   document.getElementById('app-content').classList.add('unlocked');
-  sessionStorage.setItem('vv-tracker-auth', 'true');
+  sessionStorage.setItem('vv-tracker-auth','true');
+  if (typeof fetchAll === 'function') fetchAll();
 }
-
-// Check if already authenticated this session
-if (sessionStorage.getItem('vv-tracker-auth') === 'true') { unlock(); }
-
+if (sessionStorage.getItem('vv-tracker-auth')==='true') { unlock(); }
 document.getElementById('lock-btn').addEventListener('click', tryUnlock);
-document.getElementById('lock-input').addEventListener('keydown', e => { if(e.key==='Enter') tryUnlock(); });
-
+document.getElementById('lock-input').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
 function tryUnlock() {
-  const pw = document.getElementById('lock-input').value;
-  if (checkPassword(pw)) {
-    unlock();
-  } else {
-    document.getElementById('lock-error').textContent = 'Incorrect password. Try again.';
-    document.getElementById('lock-input').value = '';
-    document.getElementById('lock-input').focus();
-  }
+  const pw=document.getElementById('lock-input').value;
+  if (checkPassword(pw)) { unlock(); }
+  else { document.getElementById('lock-error').textContent='Incorrect password. Try again.'; document.getElementById('lock-input').value=''; document.getElementById('lock-input').focus(); }
 }
 </script>
 
+<!-- ====== MAIN APP SCRIPT ====== -->
 <script>
-/* ===== BAKED-IN DATA — NO localStorage ===== */
-const projects = [
-  { id: 'la', label: 'BRL LA Tour', color: '#E4002B', shootDate: '2026-04-06', phase: '' },
-  { id: 'um-shoot', label: 'UM Shoot', color: '#d4930d', shootDate: '2026-04-15', phase: '' },
-  { id: 'creator-voyage', label: 'Creator Voyage', color: '#2563eb', shootDate: '2026-04-19', phase: '' },
-  { id: 'red-mic', label: 'Red Mic', color: '#7c3aed', shootDate: '2026-04-25', phase: '' },
-  { id: 'alaska', label: 'Alaska Foundationals', color: '#0891b2', shootDate: '2026-05-11', phase: 'Pre-Production' },
-  { id: 'post-production', label: 'Post-Production', color: '#2d8a56', shootDate: '', phase: '' },
-];
+/* ================================================================
+   AIRTABLE CONFIG
+   ================================================================ */
+const AT_TOKEN = 'patc0kOdousPGktlk.db2ab4a12c8baa3739d072f5bbeb3f125804226acc0204f4c695c3f68b25d443';
+const AT_BASE  = 'apptEXygAXr5YghoR';
+const AT_TABLE = 'tblESIxcwRntyAH30';
 
-const taskData = {
-  'la': [
-    { id:'la-1', text:'Create separate folders for World Red Eye and Vomba', detail:'BRL LA Tour pre-existing project + World Red Eye', done:false, priority:'high', owner:'Vanessa', dueDate:'2026-04-03' },
-    { id:'la-2', text:"Change Vomba's return flight", detail:'', done:false, priority:'high', owner:'Vanessa', dueDate:'2026-04-03' },
-    { id:'la-3', text:'Share VIP/Influencer facesheet with Vomba', detail:'', done:false, priority:'high', owner:'Vanessa', dueDate:'2026-04-04' },
-    { id:'la-4', text:'Email Autumn flight, hotel confirmation, and formal estimate request', detail:'Check back on 8th for cabin check-ins', done:false, priority:'high', owner:'Vanessa', dueDate:'2026-04-04' },
-    { id:'la-5', text:"Get Lauren & Ally's LA schedules", detail:'', done:false, priority:'medium', owner:'Vanessa', dueDate:'2026-04-04' },
-    { id:'la-6', text:'Check with Cherry for confirmation numbers', detail:'', done:false, priority:'medium', owner:'Vanessa', dueDate:'2026-04-04' },
-    { id:'la-7', text:'Coordinate influencer headshots', detail:'', done:false, priority:'high', owner:'Vanessa', dueDate:'2026-04-05' },
-    { id:'la-8', text:'Confirm Digi Tech +1 for LA', detail:'', done:false, priority:'medium', owner:'Vanessa', dueDate:'2026-04-04' },
-  ],
-  'um-shoot': [
-    { id:'um-1', text:'Get everyone on EBL for UM Shoot', detail:'', done:false, priority:'high', owner:'', dueDate:'2026-04-10' },
-  ],
-  'creator-voyage': [
-    { id:'cv-1', text:'Manage POs & gift bag delivery oversight', detail:'', done:false, priority:'high', owner:'', dueDate:'2026-04-16' },
-    { id:'cv-2', text:'Set up Nick as a vendor', detail:'', done:false, priority:'medium', owner:'', dueDate:'2026-04-10' },
-  ],
-  'red-mic': [
-    { id:'rm-1', text:'Get everyone on EBL for RED MIC 25 and 26', detail:'', done:false, priority:'high', owner:'', dueDate:'2026-04-18' },
-  ],
-  'alaska': [],
-  'post-production': [
-    { id:'pp-1', text:'Canon and Leica photo sorting', detail:'', done:false, priority:'medium', owner:'', dueDate:'' },
-  ],
+const F = {
+  task:     'fldUVi9KPDrZV5SdX',
+  project:  'fldmMMiFPPgV9eFc8',
+  priority: 'fld9pmLPH2fgfXfZO',
+  status:   'fld8Usy29Z6TyyB4B',
+  assignee: 'fldK7a5fFzPsWRSgk',
+  dueDate:  'fldM5CNvpwX64LaX4',
+  shootDate:'fldq2V5zeAF3xEDOb',
+  details:  'fldQDaLMPfx4igx9w',
+  checkbox: 'flda75tWnhgLWEGUs',
 };
 
+const API = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}`;
+function headers(){ return { 'Authorization':'Bearer '+AT_TOKEN, 'Content-Type':'application/json' }; }
+
+/* ===== PROJECT DEFINITIONS (local — these define tabs/shoot dates) ===== */
+let projects = [
+  { id:'BRL LA Tour', label:'BRL LA Tour', color:'#E4002B', shootDate:'2026-04-06', phase:'' },
+  { id:'UM Shoot', label:'UM Shoot', color:'#d4930d', shootDate:'2026-04-15', phase:'' },
+  { id:'Creator Voyage', label:'Creator Voyage', color:'#2563eb', shootDate:'2026-04-19', phase:'' },
+  { id:'Red Mic', label:'Red Mic', color:'#7c3aed', shootDate:'2026-04-25', phase:'' },
+  { id:'Alaska Foundationals', label:'Alaska Foundationals', color:'#0891b2', shootDate:'2026-05-11', phase:'Pre-Production' },
+  { id:'Post-Production', label:'Post-Production', color:'#2d8a56', shootDate:'', phase:'' },
+];
+
 /* ===== STATE ===== */
-let activeProject = 'la';
+let records = [];
+let activeProject = 'BRL LA Tour';
 let currentFilter = 'all';
 let currentSort = 'due-asc';
 let searchQuery = '';
 let editingTaskId = null;
-
-/* ===== HELPERS ===== */
-function gid(){ return 't-'+Date.now()+'-'+Math.random().toString(36).slice(2,7); }
-
-const COLOR_PALETTE = {
-  ocean:    { bg:'#eff6ff', fg:'#1d4ed8', label:'Ocean Blue' },
-  emerald:  { bg:'#f0fdf4', fg:'#15803d', label:'Emerald' },
-  violet:   { bg:'#faf5ff', fg:'#7c3aed', label:'Violet' },
-  teal:     { bg:'#f0fdfa', fg:'#0d9488', label:'Teal' },
-  amber:    { bg:'#fffbeb', fg:'#b45309', label:'Amber' },
-  rose:     { bg:'#fff1f2', fg:'#be123c', label:'Rose' },
-  sky:      { bg:'#f0f9ff', fg:'#0369a1', label:'Sky' },
-  fuchsia:  { bg:'#fdf4ff', fg:'#a21caf', label:'Fuchsia' },
-  slate:    { bg:'#f1f5f9', fg:'#475569', label:'Slate' },
-  indigo:   { bg:'#eef2ff', fg:'#4338ca', label:'Indigo' },
-};
-const assigneeColors = { vanessa:'teal', alfred:'ocean', kathy:'emerald', alberto:'violet' };
 let colorSettingsOpen = false;
 
-function assigneeStyle(name) {
-  const key = (name||'').toLowerCase();
-  const palKey = assigneeColors[key];
-  if (palKey && COLOR_PALETTE[palKey]) {
-    const c = COLOR_PALETTE[palKey];
-    return 'background:'+c.bg+';color:'+c.fg;
+/* ===== ASSIGNEE COLORS ===== */
+const COLOR_PALETTE = [
+  {name:'Teal',    bg:'#e0f2f1', fg:'#00796b'},
+  {name:'Blue',    bg:'#e3f2fd', fg:'#1565c0'},
+  {name:'Purple',  bg:'#ede7f6', fg:'#6a1b9a'},
+  {name:'Green',   bg:'#e8f5e9', fg:'#2e7d32'},
+  {name:'Amber',   bg:'#fff8e1', fg:'#f57f17'},
+  {name:'Indigo',  bg:'#e8eaf6', fg:'#283593'},
+  {name:'Cyan',    bg:'#e0f7fa', fg:'#00838f'},
+  {name:'Brown',   bg:'#efebe9', fg:'#4e342e'},
+  {name:'Pink',    bg:'#fce4ec', fg:'#ad1457'},
+  {name:'Grey',    bg:'#eceff1', fg:'#37474f'},
+];
+let assigneeColors = { Alfred:0, Vanessa:0, Kathy:3, Alberto:5 };
+
+function getAssigneeStyle(name) {
+  const idx = assigneeColors[name] ?? 0;
+  const c = COLOR_PALETTE[idx] || COLOR_PALETTE[0];
+  return `background:${c.bg};color:${c.fg}`;
+}
+
+function toggleColorSettings() {
+  colorSettingsOpen = !colorSettingsOpen;
+  renderColorSettings();
+}
+
+function renderColorSettings() {
+  const container = document.getElementById('color-settings-container');
+  if (!colorSettingsOpen) { container.innerHTML = ''; return; }
+  let html = '<div class="color-settings"><h4>Assignee Color Settings</h4>';
+  ['Alfred','Vanessa','Kathy','Alberto'].forEach(name => {
+    html += '<div class="color-row"><span>' + esc(name) + '</span><select onchange="setAssigneeColor(\'' + name + '\', this.value)">';
+    COLOR_PALETTE.forEach((c, i) => {
+      html += '<option value="' + i + '"' + (assigneeColors[name] === i ? ' selected' : '') + '>' + c.name + '</option>';
+    });
+    html += '</select><span style="display:inline-block;width:18px;height:18px;border-radius:50%;' + getAssigneeStyle(name) + '"></span></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function setAssigneeColor(name, idx) {
+  assigneeColors[name] = parseInt(idx);
+  renderColorSettings();
+  render();
+}
+
+/* ===== HELPERS ===== */
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00'); target.setHours(0,0,0,0);
+  return Math.ceil((target - today) / (1000*60*60*24));
+}
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function dateUrgencyClass(dateStr) {
+  const days = daysUntil(dateStr);
+  if (days === null) return 'no-date';
+  if (days <= 5) return 'urgent';
+  if (days <= 14) return 'soon';
+  return 'future';
+}
+function countdownText(dateStr) {
+  const days = daysUntil(dateStr);
+  if (days === null) return 'No date set';
+  if (days < 0) return Math.abs(days) + 'd ago';
+  if (days === 0) return 'TODAY';
+  if (days === 1) return 'Tomorrow';
+  return days + ' days away';
+}
+
+function setSyncMsg(msg) { document.getElementById('sync-msg').textContent = msg; }
+
+/* ===== AIRTABLE API ===== */
+async function fetchAll() {
+  setSyncMsg('Syncing...');
+  try {
+    let all=[], offset='';
+    do {
+      const url = API + '?pageSize=100&returnFieldsByFieldId=true' + (offset ? '&offset='+offset : '');
+      const res = await fetch(url, { headers: headers() });
+      if (!res.ok) throw new Error('Airtable error: '+res.status);
+      const data = await res.json();
+      all = all.concat(data.records);
+      offset = data.offset || '';
+    } while (offset);
+    records = all;
+    setSyncMsg('Saved ' + new Date().toLocaleTimeString());
+    render();
+  } catch(e) {
+    setSyncMsg('Sync failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function updateRecord(recId, fields) {
+  setSyncMsg('Syncing...');
+  try {
+    const res = await fetch(API + '/' + recId, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({ fields })
+    });
+    if (!res.ok) throw new Error('Update failed: '+res.status);
+    const updated = await res.json();
+    const idx = records.findIndex(r => r.id === recId);
+    if (idx >= 0) records[idx] = updated;
+    setSyncMsg('Saved ' + new Date().toLocaleTimeString());
+    render();
+  } catch(e) {
+    setSyncMsg('Sync failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function createRecord(fields) {
+  setSyncMsg('Syncing...');
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ fields })
+    });
+    if (!res.ok) throw new Error('Create failed: '+res.status);
+    const created = await res.json();
+    records.push(created);
+    setSyncMsg('Saved ' + new Date().toLocaleTimeString());
+    render();
+  } catch(e) {
+    setSyncMsg('Sync failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function deleteRecord(recId) {
+  setSyncMsg('Syncing...');
+  try {
+    const res = await fetch(API + '/' + recId, { method: 'DELETE', headers: headers() });
+    if (!res.ok) throw new Error('Delete failed: '+res.status);
+    records = records.filter(r => r.id !== recId);
+    setSyncMsg('Saved ' + new Date().toLocaleTimeString());
+    render();
+  } catch(e) {
+    setSyncMsg('Sync failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+/* ===== RECORD HELPERS ===== */
+function rv(rec, key) { return rec.fields[F[key]] || ''; }
+
+/* Linked-record helpers for Assignee (now multipleRecordLinks) */
+const TEAM_MAP = {
+  'Alfred':  'recPzwB4PpqkWCVVf',
+  'Vanessa': 'recpCPFXXqRSJaWmC',
+  'Kathy':   'recPuV46qPMRF83r7',
+  'Alberto': 'recOPXzNKokNC6ivJ',
+};
+const TEAM_ID_TO_NAME = {};
+Object.entries(TEAM_MAP).forEach(([name, id]) => TEAM_ID_TO_NAME[id] = name);
+
+// Get assignee display name(s) from linked record array
+// REST API with returnFieldsByFieldId returns linked records as plain ID strings: ["recXXX"]
+function getAssignee(rec) {
+  const val = rec.fields[F.assignee];
+  if (!val) return '';
+  if (typeof val === 'string') return TEAM_ID_TO_NAME[val] || val;
+  if (Array.isArray(val)) {
+    return val.map(v => {
+      if (typeof v === 'string') return TEAM_ID_TO_NAME[v] || v;
+      // fallback for object format {id, name}
+      return TEAM_ID_TO_NAME[v.id] || (v.name || '').split(' ')[0];
+    }).join(', ');
   }
   return '';
 }
-function assigneeClass(name) {
-  const key = (name||'').toLowerCase();
-  return assigneeColors[key] ? '' : 'assignee-default';
-}
-function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
-function daysUntil(ds){
-  if(!ds) return null;
-  const t=new Date(); t.setHours(0,0,0,0);
-  const g=new Date(ds+'T00:00:00'); g.setHours(0,0,0,0);
-  return Math.ceil((g-t)/(864e5));
-}
-function formatDate(ds){
-  if(!ds) return '';
-  return new Date(ds+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-}
-function urgClass(ds){
-  const d=daysUntil(ds);
-  if(d===null) return 'no-date';
-  if(d<=5) return 'urgent';
-  if(d<=14) return 'soon';
-  return 'future';
-}
-function countdown(ds){
-  const d=daysUntil(ds);
-  if(d===null) return 'No date set';
-  if(d<0) return Math.abs(d)+'d ago';
-  if(d===0) return 'TODAY';
-  if(d===1) return 'Tomorrow';
-  return d+' days away';
-}
-function dueBadge(dd){
-  if(!dd) return '';
-  const d=daysUntil(dd);
-  let c='due-future', l=formatDate(dd);
-  if(d<0){ c='overdue'; l=formatDate(dd)+' (overdue)'; }
-  else if(d===0){ c='due-today'; l='Today'; }
-  else if(d<=3){ c='due-soon'; l=formatDate(dd)+' ('+d+'d)'; }
-  return '<span class="badge '+c+'">'+l+'</span>';
+// Get first assignee short name for color matching
+function getFirstAssignee(rec) {
+  const val = rec.fields[F.assignee];
+  if (!val) return '';
+  if (typeof val === 'string') return TEAM_ID_TO_NAME[val] || val;
+  if (Array.isArray(val) && val.length > 0) {
+    const v = val[0];
+    if (typeof v === 'string') return TEAM_ID_TO_NAME[v] || v;
+    return TEAM_ID_TO_NAME[v.id] || (v.name || '').split(' ')[0];
+  }
+  return '';
 }
 
-/* ===== DASHBOARD ===== */
-function updateDash(){
-  let total=0,done=0,over=0,wk=0;
-  const now=new Date(); now.setHours(0,0,0,0);
-  const wEnd=new Date(now); wEnd.setDate(wEnd.getDate()+7);
-  Object.values(taskData).forEach(ts=>ts.forEach(t=>{
-    total++;
-    if(t.done) done++;
-    if(t.dueDate){
-      const d=daysUntil(t.dueDate);
-      if(d!==null && d<0 && !t.done) over++;
-      const td=new Date(t.dueDate+'T00:00:00');
-      if(td>=now && td<=wEnd && !t.done) wk++;
-    }
-  }));
-  document.getElementById('d-total').textContent=total;
-  document.getElementById('d-done').textContent=done;
-  document.getElementById('d-overdue').textContent=over;
-  document.getElementById('d-week').textContent=wk;
+// Convert short name to linked record IDs for API writes
+// Airtable REST API expects plain string array: ["recXXX"]
+function assigneeToLinkedIds(name) {
+  if (!name) return [];
+  const id = TEAM_MAP[name];
+  return id ? [id] : [];
 }
+function tasksDone(proj) { return recordsForProject(proj).filter(r => rv(r,'status')==='Completed').length; }
+function tasksTotal(proj) { return recordsForProject(proj).length; }
+function recordsForProject(proj) { return records.filter(r => rv(r,'project') === proj); }
 
-/* ===== SORT / FILTER ===== */
-function sortTasks(ts){
-  const pv={high:0,medium:1,low:2};
-  return [...ts].sort((a,b)=>{
-    switch(currentSort){
-      case 'due-asc': if(!a.dueDate&&!b.dueDate) return 0; if(!a.dueDate) return 1; if(!b.dueDate) return -1; return a.dueDate.localeCompare(b.dueDate);
-      case 'due-desc': if(!a.dueDate&&!b.dueDate) return 0; if(!a.dueDate) return 1; if(!b.dueDate) return -1; return b.dueDate.localeCompare(a.dueDate);
-      case 'priority': return (pv[a.priority]||1)-(pv[b.priority]||1);
-      case 'name': return a.text.localeCompare(b.text);
-      case 'assignee': return (a.owner||'zzz').localeCompare(b.owner||'zzz');
-      default: return 0;
-    }
+/* ===== SORT PROJECTS BY SHOOT DATE ===== */
+function getSortedProjects() {
+  return [...projects].sort((a,b) => {
+    if (!a.shootDate && !b.shootDate) return 0;
+    if (!a.shootDate) return 1;
+    if (!b.shootDate) return -1;
+    return new Date(a.shootDate) - new Date(b.shootDate);
   });
 }
-function filterTasks(ts){
-  return ts.filter(t=>{
-    if(searchQuery && !t.text.toLowerCase().includes(searchQuery.toLowerCase()) && !(t.owner||'').toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    switch(currentFilter){
-      case 'pending': return !t.done;
-      case 'done': return t.done;
-      case 'high': return t.priority==='high';
-      case 'overdue': return t.dueDate && daysUntil(t.dueDate)<0 && !t.done;
-      default: return true;
-    }
-  });
+
+/* ===== STATS ===== */
+function updateDash() {
+  let total=0, done=0;
+  records.forEach(r => { total++; if(rv(r,'status')==='Completed') done++; });
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = pct + '%';
+  document.getElementById('stat-done').textContent = done + ' done';
+  document.getElementById('stat-remaining').textContent = (total-done) + ' remaining';
 }
 
 /* ===== TABS ===== */
-function renderTabs(){
-  const bar=document.getElementById('tab-bar');
-  bar.innerHTML='';
-  projects.forEach(p=>{
-    const ts=taskData[p.id]||[];
-    const rem=ts.filter(t=>!t.done).length;
-    const u=urgClass(p.shootDate);
-    const btn=document.createElement('button');
-    btn.className='tab'+(activeProject===p.id?' active':'');
-    btn.innerHTML='<span class="tab-top">'+esc(p.label)+' <span class="tab-count'+(rem===0?' zero':'')+'">'+rem+'</span></span>'
-      +'<span class="tab-date '+u+'">'+(p.shootDate?formatDate(p.shootDate)+' &middot; '+countdown(p.shootDate):'Ongoing')+'</span>';
-    btn.addEventListener('click',()=>{ activeProject=p.id; editingTaskId=null; render(); });
+function renderTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  const sorted = getSortedProjects();
+
+  sorted.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (activeProject === p.id ? ' active' : '');
+    const projRecs = recordsForProject(p.id);
+    const remaining = projRecs.filter(r => rv(r,'status')!=='Completed').length;
+    const urgency = dateUrgencyClass(p.shootDate);
+
+    let dateLabel = '';
+    if (p.shootDate) {
+      dateLabel = '<span class="tab-date ' + urgency + '">' + formatDate(p.shootDate) + ' &middot; ' + countdownText(p.shootDate) + '</span>';
+    } else {
+      dateLabel = '<span class="tab-date">Ongoing</span>';
+    }
+
+    btn.innerHTML = '<span>' + esc(p.label) + '<span class="tab-count">' + remaining + '</span></span>' + dateLabel;
+    if (remaining === 0 && projRecs.length > 0) {
+      btn.querySelector('span').innerHTML += '<span class="tab-dot" style="background:var(--vv-green)"></span>';
+    }
+    btn.addEventListener('click', () => { activeProject = p.id; render(); });
     bar.appendChild(btn);
   });
+
   // + New Project button
-  const addBtn=document.createElement('button');
-  addBtn.className='tab-add';
-  addBtn.textContent='+';
-  addBtn.title='Add new project';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'tab-add';
+  addBtn.textContent = '+';
+  addBtn.title = 'Add new project';
   addBtn.addEventListener('click', showNewProjectForm);
   bar.appendChild(addBtn);
 }
 
-/* ===== PANEL ===== */
-function renderPanel(){
-  const panel=document.getElementById('panel');
-  const proj=projects.find(p=>p.id===activeProject);
-  if(!proj){ panel.innerHTML='<div class="empty-msg">Select a project</div>'; return; }
+/* ===== PROJECT HEADER ===== */
+function renderProjectHeader() {
+  const el = document.getElementById('project-header');
+  const proj = projects.find(p => p.id === activeProject);
+  if (!proj) { el.innerHTML = ''; return; }
 
-  const raw=taskData[activeProject]||[];
-  const filtered=filterTasks(raw);
-  const sorted=sortTasks(filtered);
+  const urgency = dateUrgencyClass(proj.shootDate);
+  let badgeText = '';
+  if (proj.shootDate) {
+    badgeText = formatDate(proj.shootDate) + ' &middot; ' + countdownText(proj.shootDate);
+  } else {
+    badgeText = 'No shoot date';
+  }
+  if (proj.phase) badgeText = proj.phase + ' &middot; ' + badgeText;
 
-  const u=urgClass(proj.shootDate);
-  let bt=proj.shootDate?formatDate(proj.shootDate)+' &middot; '+countdown(proj.shootDate):'No shoot date';
-  if(proj.phase) bt=proj.phase+' &middot; '+bt;
+  el.innerHTML =
+    '<span class="project-title">' + esc(proj.label) + '</span>' +
+    '<span class="shoot-date-badge ' + urgency + '">' + badgeText + '</span>' +
+    '<button class="btn-edit-project" id="btn-edit-proj">Edit Project</button>' +
+    '<button class="btn-delete-project" id="btn-delete-proj">Delete</button>';
 
-  let h='';
-  h+='<div class="proj-header"><span class="proj-title">'+esc(proj.label)+'</span><span class="shoot-badge '+u+'">'+bt+'</span>'
-    +'<button class="btn-edit-project" id="btn-edit-proj">Edit Project</button>'
-    +'<button class="btn-delete-project" id="btn-delete-proj">Delete</button></div>';
-  h+='<div id="proj-form-slot"></div>';
-
-  // Color settings panel
-  h+='<div class="color-settings'+(colorSettingsOpen?' open':'')+'" id="color-settings">';
-  h+='<h4>Assignee Colors</h4>';
-  const palKeys=Object.keys(COLOR_PALETTE);
-  ['Vanessa','Alfred','Kathy','Alberto'].forEach(name=>{
-    const key=name.toLowerCase();
-    const cur=assigneeColors[key]||'ocean';
-    const sty=assigneeStyle(name);
-    h+='<div class="color-row">';
-    h+='<span class="assignee-pill" style="'+(sty||'background:#f3f4f6;color:#6b7280')+'">'+name+'</span>';
-    h+='<select class="color-pick" data-person="'+key+'">';
-    palKeys.forEach(pk=>{
-      const c=COLOR_PALETTE[pk];
-      h+='<option value="'+pk+'"'+(cur===pk?' selected':'')+'>'+c.label+'</option>';
-    });
-    h+='</select></div>';
-  });
-  h+='</div>';
-
-  // Toolbar
-  h+='<div class="toolbar">';
-  ['all','pending','done','high','overdue'].forEach(f=>{
-    const lb={all:'All',pending:'Pending',done:'Completed',high:'High Priority',overdue:'Overdue'};
-    h+='<button class="filter-btn'+(currentFilter===f?' active':'')+'" data-filter="'+f+'">'+lb[f]+'</button>';
-  });
-  h+='<input type="text" class="search-box" placeholder="Search tasks..." value="'+esc(searchQuery)+'" id="search-input">';
-  h+='<select class="sort-select" id="sort-select">';
-  h+='<option value="due-asc"'+(currentSort==='due-asc'?' selected':'')+'>Due Date (soonest)</option>';
-  h+='<option value="due-desc"'+(currentSort==='due-desc'?' selected':'')+'>Due Date (latest)</option>';
-  h+='<option value="priority"'+(currentSort==='priority'?' selected':'')+'>Priority</option>';
-  h+='<option value="name"'+(currentSort==='name'?' selected':'')+'>Name</option>';
-  h+='<option value="assignee"'+(currentSort==='assignee'?' selected':'')+'>Assignee</option>';
-  h+='</select>';
-  h+='<button class="btn-color-toggle" id="btn-colors">'+(colorSettingsOpen?'Hide Colors':'Assignee Colors')+'</button>';
-  h+='</div>';
-
-  // Tasks
-  h+='<div class="task-list">';
-  if(sorted.length===0) h+='<div class="empty-msg">No tasks match your filter</div>';
-  sorted.forEach(t=>{
-    const oi=raw.indexOf(t);
-    h+='<div class="task-item'+(t.done?' done':'')+'">';
-    h+='<input type="checkbox" class="task-check" data-idx="'+oi+'"'+(t.done?' checked':'')+'>';
-    h+='<div class="task-body"><div class="task-row">';
-    h+='<span class="task-name">'+esc(t.text)+'</span>';
-    h+='<span class="badge '+t.priority+'">'+t.priority.charAt(0).toUpperCase()+t.priority.slice(1)+'</span>';
-    if(t.owner) {
-      const ac=assigneeClass(t.owner), as=assigneeStyle(t.owner);
-      h+='<span class="assignee-pill '+ac+'"'+(as?' style="'+as+'"':'')+'>'+esc(t.owner)+'</span>';
-    }
-    h+=dueBadge(t.dueDate);
-    h+='</div>';
-    if(t.detail) h+='<div class="task-detail">'+esc(t.detail)+'</div>';
-
-    if(editingTaskId===t.id){
-      h+='<div class="edit-form">';
-      h+='<div class="edit-row"><label>Task</label><input type="text" id="edit-text" value="'+esc(t.text)+'"></div>';
-      h+='<div class="edit-row"><label>Assignee</label><input type="text" id="edit-owner" value="'+esc(t.owner||'')+'"></div>';
-      h+='<div class="edit-row"><label>Priority</label><select id="edit-priority"><option value="high"'+(t.priority==='high'?' selected':'')+'>High</option><option value="medium"'+(t.priority==='medium'?' selected':'')+'>Medium</option><option value="low"'+(t.priority==='low'?' selected':'')+'>Low</option></select></div>';
-      h+='<div class="edit-row"><label>Due Date</label><input type="date" id="edit-due" value="'+(t.dueDate||'')+'"></div>';
-      h+='<div class="edit-row"><label>Project</label><select id="edit-project">';
-      projects.forEach(pr=>{ h+='<option value="'+pr.id+'"'+(pr.id===activeProject?' selected':'')+'>'+esc(pr.label)+'</option>'; });
-      h+='</select></div>';
-      h+='<div class="edit-row"><label>Details</label><textarea id="edit-detail">'+esc(t.detail||'')+'</textarea></div>';
-      h+='<div class="edit-actions"><button class="btn-save" data-idx="'+oi+'">Save</button><button class="btn-cancel">Cancel</button></div>';
-      h+='</div>';
-    }
-
-    h+='</div>';
-    h+='<div class="task-actions"><button class="btn-sm edit-btn" data-id="'+t.id+'">Edit</button><button class="btn-sm del" data-idx="'+oi+'">Del</button></div>';
-    h+='</div>';
-  });
-  h+='</div>';
-
-  // Add form
-  h+='<div class="add-form"><div class="add-row">';
-  h+='<input type="text" id="new-text" placeholder="New task name...">';
-  h+='<select id="new-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>';
-  h+='<input type="text" id="new-owner" placeholder="Assignee" style="max-width:130px;">';
-  h+='<input type="date" id="new-due" style="max-width:150px;">';
-  h+='<button class="btn-add" id="btn-add-task">+ Add Task</button>';
-  h+='</div><div class="add-row" style="margin-top:6px;"><input type="text" id="new-detail" placeholder="Details / notes (optional)" style="flex:1;"></div></div>';
-
-  panel.innerHTML=h;
-  bind();
-}
-
-/* ===== EVENT BINDING ===== */
-function bind(){
-  document.querySelectorAll('.filter-btn').forEach(b=>b.addEventListener('click',()=>{ currentFilter=b.dataset.filter; render(); }));
-  const ss=document.getElementById('sort-select');
-  if(ss) ss.addEventListener('change',()=>{ currentSort=ss.value; render(); });
-  const si=document.getElementById('search-input');
-  if(si) si.addEventListener('input',()=>{ searchQuery=si.value; render(); });
-
-  document.querySelectorAll('.task-check').forEach(cb=>cb.addEventListener('change',()=>{
-    const i=parseInt(cb.dataset.idx); const ts=taskData[activeProject];
-    if(ts[i]){ ts[i].done=cb.checked; render(); }
-  }));
-
-  document.querySelectorAll('.edit-btn').forEach(b=>b.addEventListener('click',()=>{
-    editingTaskId=editingTaskId===b.dataset.id?null:b.dataset.id; render();
-  }));
-
-  const sv=document.querySelector('.btn-save');
-  if(sv) sv.addEventListener('click',()=>{
-    const i=parseInt(sv.dataset.idx); const ts=taskData[activeProject]; const t=ts[i]; if(!t) return;
-    t.text=document.getElementById('edit-text').value.trim()||t.text;
-    t.owner=document.getElementById('edit-owner').value.trim();
-    t.priority=document.getElementById('edit-priority').value;
-    t.dueDate=document.getElementById('edit-due').value;
-    t.detail=document.getElementById('edit-detail').value.trim();
-    const np=document.getElementById('edit-project').value;
-    if(np!==activeProject){ ts.splice(i,1); if(!taskData[np]) taskData[np]=[]; taskData[np].push(t); }
-    editingTaskId=null; render();
-  });
-
-  const cn=document.querySelector('.btn-cancel');
-  if(cn) cn.addEventListener('click',()=>{ editingTaskId=null; render(); });
-
-  document.querySelectorAll('.btn-sm.del').forEach(b=>b.addEventListener('click',()=>{
-    if(confirm('Delete this task?')){ taskData[activeProject].splice(parseInt(b.dataset.idx),1); render(); }
-  }));
-
-  const ab=document.getElementById('btn-add-task');
-  if(ab) ab.addEventListener('click',()=>{
-    const tx=document.getElementById('new-text').value.trim(); if(!tx) return;
-    if(!taskData[activeProject]) taskData[activeProject]=[];
-    taskData[activeProject].push({
-      id:gid(), text:tx, detail:document.getElementById('new-detail').value.trim(),
-      done:false, priority:document.getElementById('new-priority').value,
-      owner:document.getElementById('new-owner').value.trim(),
-      dueDate:document.getElementById('new-due').value,
-    });
-    render();
-  });
-
-  // Color settings toggle + pickers
-  const cb=document.getElementById('btn-colors');
-  if(cb) cb.addEventListener('click',()=>{ colorSettingsOpen=!colorSettingsOpen; render(); });
-  document.querySelectorAll('.color-pick').forEach(sel=>{
-    sel.addEventListener('change',()=>{
-      assigneeColors[sel.dataset.person]=sel.value;
-      render();
-    });
-  });
-
-  // Edit / Delete project buttons
-  const ep=document.getElementById('btn-edit-proj');
-  if(ep) ep.addEventListener('click',()=>{
-    const proj=projects.find(p=>p.id===activeProject);
-    if(proj) showEditProjectForm(proj);
-  });
-  const dp=document.getElementById('btn-delete-proj');
-  if(dp) dp.addEventListener('click',()=>{
-    const proj=projects.find(p=>p.id===activeProject);
-    if(!proj) return;
-    if(!confirm('Delete project "'+proj.label+'" and all its tasks?')) return;
-    const idx=projects.findIndex(p=>p.id===proj.id);
-    if(idx>-1) projects.splice(idx,1);
-    delete taskData[proj.id];
-    activeProject=projects.length>0?projects[0].id:'';
+  document.getElementById('btn-edit-proj').addEventListener('click', () => showEditProjectForm(proj));
+  document.getElementById('btn-delete-proj').addEventListener('click', () => {
+    if (!confirm('Delete project "' + proj.label + '" and all its tasks?')) return;
+    // Delete all Airtable records for this project
+    const projRecs = recordsForProject(proj.id);
+    projRecs.forEach(r => deleteRecord(r.id));
+    projects = projects.filter(p => p.id !== proj.id);
+    const sorted = getSortedProjects();
+    activeProject = sorted.length > 0 ? sorted[0].id : '';
     render();
   });
 }
 
 /* ===== NEW PROJECT FORM ===== */
-function showNewProjectForm(){
-  const panel=document.getElementById('panel');
-  const colors=['#E4002B','#2563eb','#d4930d','#7c3aed','#0891b2','#2d8a56','#e85d04','#6366f1'];
-  panel.innerHTML=
-    '<div class="proj-form">'+
-    '<h3 style="font-size:15px;margin-bottom:4px;">New Project</h3>'+
-    '<div class="edit-row"><label>Name</label><input type="text" id="np-name" placeholder="Project name"></div>'+
-    '<div class="edit-row"><label>Shoot Date</label><input type="date" id="np-shoot"></div>'+
-    '<div class="edit-row"><label>Phase</label><input type="text" id="np-phase" placeholder="e.g. Pre-Production (optional)"></div>'+
-    '<div class="edit-row"><label>Color</label><select id="np-color">'+
-    colors.map(c=>'<option value="'+c+'" style="color:'+c+'">'+c+'</option>').join('')+
-    '</select></div>'+
-    '<div class="edit-actions"><button class="btn-save" id="np-save">Create Project</button><button class="btn-cancel" id="np-cancel">Cancel</button></div>'+
-    '</div>';
-  document.getElementById('np-save').addEventListener('click',()=>{
-    const name=document.getElementById('np-name').value.trim();
-    if(!name) return;
-    const id='proj-'+Date.now();
+function showNewProjectForm() {
+  const container = document.getElementById('new-project-container');
+  if (container.querySelector('.new-project-form')) return;
+
+  const form = document.createElement('div');
+  form.className = 'new-project-form';
+  form.innerHTML = `
+    <h3>New Project</h3>
+    <div class="edit-form-grid">
+      <div class="edit-field"><label>Project Name</label><input type="text" id="np-name" placeholder="e.g. Summer Campaign"></div>
+      <div class="edit-field"><label>Shoot / Event Date</label><input type="date" id="np-date"></div>
+      <div class="edit-field"><label>Phase (optional)</label><input type="text" id="np-phase" placeholder="e.g. Pre-Production"></div>
+      <div class="edit-field"><label>Color</label>
+        <select id="np-color">
+          <option value="#E4002B">Red</option><option value="#2563eb">Blue</option><option value="#d4930d">Amber</option>
+          <option value="#7c3aed">Purple</option><option value="#2d8a56">Green</option><option value="#0891b2">Teal</option>
+          <option value="#db2777">Pink</option><option value="#ea580c">Orange</option>
+        </select>
+      </div>
+    </div>
+    <div class="edit-btns">
+      <button class="btn-save" id="np-save">Create Project</button>
+      <button class="btn-cancel" id="np-cancel">Cancel</button>
+    </div>
+  `;
+  container.appendChild(form);
+  form.querySelector('#np-name').focus();
+
+  form.querySelector('#np-save').addEventListener('click', () => {
+    const name = form.querySelector('#np-name').value.trim();
+    if (!name) { form.querySelector('#np-name').style.borderColor = 'var(--vv-red)'; return; }
     projects.push({
-      id:id, label:name, color:document.getElementById('np-color').value,
-      shootDate:document.getElementById('np-shoot').value,
-      phase:document.getElementById('np-phase').value.trim(),
+      id: name, label: name,
+      color: form.querySelector('#np-color').value,
+      shootDate: form.querySelector('#np-date').value || '',
+      phase: form.querySelector('#np-phase').value.trim()
     });
-    // Sort projects by shoot date
-    projects.sort((a,b)=>{
-      if(!a.shootDate&&!b.shootDate) return 0;
-      if(!a.shootDate) return 1; if(!b.shootDate) return -1;
-      return a.shootDate.localeCompare(b.shootDate);
-    });
-    taskData[id]=[];
-    activeProject=id;
+    activeProject = name;
+    form.remove();
     render();
   });
-  document.getElementById('np-cancel').addEventListener('click',()=>render());
+
+  form.querySelector('#np-cancel').addEventListener('click', () => form.remove());
+  form.querySelector('#np-name').addEventListener('keydown', e => { if (e.key === 'Enter') form.querySelector('#np-save').click(); });
 }
 
 /* ===== EDIT PROJECT FORM ===== */
-function showEditProjectForm(proj){
-  const slot=document.getElementById('proj-form-slot');
-  if(!slot) return;
-  slot.innerHTML=
-    '<div class="proj-form">'+
-    '<h3 style="font-size:15px;margin-bottom:4px;">Edit Project</h3>'+
-    '<div class="edit-row"><label>Name</label><input type="text" id="ep-name" value="'+esc(proj.label)+'"></div>'+
-    '<div class="edit-row"><label>Shoot Date</label><input type="date" id="ep-shoot" value="'+(proj.shootDate||'')+'"></div>'+
-    '<div class="edit-row"><label>Phase</label><input type="text" id="ep-phase" value="'+esc(proj.phase||'')+'"></div>'+
-    '<div class="edit-actions"><button class="btn-save" id="ep-save">Save</button><button class="btn-cancel" id="ep-cancel">Cancel</button></div>'+
-    '</div>';
-  document.getElementById('ep-save').addEventListener('click',()=>{
-    const name=document.getElementById('ep-name').value.trim();
-    if(!name) return;
-    proj.label=name;
-    proj.shootDate=document.getElementById('ep-shoot').value;
-    proj.phase=document.getElementById('ep-phase').value.trim();
-    projects.sort((a,b)=>{
-      if(!a.shootDate&&!b.shootDate) return 0;
-      if(!a.shootDate) return 1; if(!b.shootDate) return -1;
-      return a.shootDate.localeCompare(b.shootDate);
-    });
+function showEditProjectForm(proj) {
+  const section = document.getElementById('main-section');
+  if (section.querySelector('.new-project-form')) return;
+
+  const form = document.createElement('div');
+  form.className = 'new-project-form';
+  form.style.marginBottom = '14px';
+  form.innerHTML = `
+    <h3>Edit Project</h3>
+    <div class="edit-form-grid">
+      <div class="edit-field"><label>Project Name</label><input type="text" id="ep-name" value="${esc(proj.label)}"></div>
+      <div class="edit-field"><label>Shoot / Event Date</label><input type="date" id="ep-date" value="${proj.shootDate || ''}"></div>
+      <div class="edit-field"><label>Phase</label><input type="text" id="ep-phase" value="${esc(proj.phase || '')}"></div>
+      <div class="edit-field"><label>Color</label>
+        <select id="ep-color">
+          <option value="#E4002B"${proj.color==='#E4002B'?' selected':''}>Red</option>
+          <option value="#2563eb"${proj.color==='#2563eb'?' selected':''}>Blue</option>
+          <option value="#d4930d"${proj.color==='#d4930d'?' selected':''}>Amber</option>
+          <option value="#7c3aed"${proj.color==='#7c3aed'?' selected':''}>Purple</option>
+          <option value="#2d8a56"${proj.color==='#2d8a56'?' selected':''}>Green</option>
+          <option value="#0891b2"${proj.color==='#0891b2'?' selected':''}>Teal</option>
+          <option value="#db2777"${proj.color==='#db2777'?' selected':''}>Pink</option>
+          <option value="#ea580c"${proj.color==='#ea580c'?' selected':''}>Orange</option>
+        </select>
+      </div>
+    </div>
+    <div class="edit-btns">
+      <button class="btn-save" id="ep-save">Save</button>
+      <button class="btn-cancel" id="ep-cancel">Cancel</button>
+    </div>
+  `;
+  section.insertBefore(form, section.firstChild);
+  form.querySelector('#ep-name').focus();
+
+  form.querySelector('#ep-save').addEventListener('click', () => {
+    const newName = form.querySelector('#ep-name').value.trim() || proj.label;
+    const oldId = proj.id;
+    proj.label = newName;
+    proj.id = newName;
+    proj.shootDate = form.querySelector('#ep-date').value || '';
+    proj.phase = form.querySelector('#ep-phase').value.trim();
+    proj.color = form.querySelector('#ep-color').value;
+    // Update records that had old project name
+    if (oldId !== newName) {
+      recordsForProject(oldId).forEach(r => {
+        updateRecord(r.id, { [F.project]: newName });
+      });
+    }
+    if (activeProject === oldId) activeProject = newName;
+    form.remove();
     render();
   });
-  document.getElementById('ep-cancel').addEventListener('click',()=>render());
+
+  form.querySelector('#ep-cancel').addEventListener('click', () => form.remove());
 }
+
+/* ===== FILTER & SORT ===== */
+function matchesFilter(rec) {
+  const status = rv(rec,'status');
+  const pri = rv(rec,'priority');
+  const due = rv(rec,'dueDate');
+  const done = status === 'Completed';
+
+  if (currentFilter === 'pending' && done) return false;
+  if (currentFilter === 'done' && !done) return false;
+  if (currentFilter === 'high' && pri !== 'High') return false;
+  if (currentFilter === 'overdue') {
+    if (done) return false;
+    const d = daysUntil(due);
+    if (d === null || d >= 0) return false;
+  }
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    const text = (rv(rec,'task') + ' ' + rv(rec,'details') + ' ' + getAssignee(rec)).toLowerCase();
+    if (!text.includes(q)) return false;
+  }
+  return true;
+}
+
+function sortRecords(recs) {
+  const priVal = { High:0, Medium:1, Low:2 };
+  return [...recs].sort((a,b) => {
+    switch (currentSort) {
+      case 'due-asc': {
+        const da = rv(a,'dueDate'), db = rv(b,'dueDate');
+        if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+        return new Date(da) - new Date(db);
+      }
+      case 'due-desc': {
+        const da = rv(a,'dueDate'), db = rv(b,'dueDate');
+        if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+        return new Date(db) - new Date(da);
+      }
+      case 'priority': return (priVal[rv(a,'priority')]??1) - (priVal[rv(b,'priority')]??1);
+      case 'assignee': return (getAssignee(a)||'zzz').localeCompare(getAssignee(b)||'zzz');
+      case 'name': return (rv(a,'task')||'').localeCompare(rv(b,'task')||'');
+      case 'created': return 0;
+      default: return 0;
+    }
+  });
+}
+
+function dueBadgeHtml(dueDate) {
+  if (!dueDate) return '';
+  const days = daysUntil(dueDate);
+  let cls = 'due-future', label = formatDate(dueDate);
+  if (days < 0) { cls = 'overdue'; label = 'Overdue · ' + formatDate(dueDate); }
+  else if (days === 0) { cls = 'due-today'; label = 'Due today'; }
+  else if (days === 1) { cls = 'due-soon'; label = 'Due tomorrow'; }
+  else if (days <= 3) { cls = 'due-soon'; label = 'Due ' + formatDate(dueDate) + ' (' + days + 'd)'; }
+  else { label = 'Due ' + formatDate(dueDate); }
+  return '<span class="due-badge ' + cls + '">' + label + '</span>';
+}
+
+/* ===== RENDER TASKS ===== */
+function renderPanel() {
+  renderProjectHeader();
+
+  const projRecs = recordsForProject(activeProject);
+  const sorted = sortRecords(projRecs);
+  const listEl = document.getElementById('task-list');
+  listEl.innerHTML = '';
+
+  let visibleCount = 0;
+  sorted.forEach(rec => {
+    if (!matchesFilter(rec)) return;
+    visibleCount++;
+    const done = rv(rec,'status') === 'Completed';
+    const li = document.createElement('li');
+    li.className = 'task-item' + (done ? ' completed' : '');
+
+    const row = document.createElement('div'); row.className = 'task-row';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = done;
+    cb.addEventListener('change', () => {
+      updateRecord(rec.id, { [F.status]: cb.checked ? 'Completed' : 'Pending' });
+    });
+
+    const txt = document.createElement('div'); txt.className = 'task-text';
+    let meta = '';
+    meta += dueBadgeHtml(rv(rec,'dueDate'));
+    const assignee = getAssignee(rec);
+    const firstAssignee = getFirstAssignee(rec);
+    if (assignee) meta += '<span class="owner-badge" style="' + getAssigneeStyle(firstAssignee) + '">' + esc(assignee) + '</span>';
+    const pri = rv(rec,'priority');
+    if (pri) meta += '<span class="priority-' + pri.toLowerCase() + '">' + esc(pri) + '</span>';
+    const det = rv(rec,'details');
+    if (det) meta += '<span>' + esc(det) + '</span>';
+    txt.innerHTML = '<strong>' + esc(rv(rec,'task')) + '</strong><div class="task-meta">' + meta + '</div>';
+
+    const actions = document.createElement('div'); actions.className = 'task-actions';
+    const btnEdit = document.createElement('button'); btnEdit.className = 'btn-icon'; btnEdit.textContent = 'edit';
+    btnEdit.addEventListener('click', () => editTask(rec, li));
+    const btnDel = document.createElement('button'); btnDel.className = 'btn-icon delete'; btnDel.textContent = '✕';
+    btnDel.addEventListener('click', () => { if(confirm('Delete "'+rv(rec,'task')+'"?')) deleteRecord(rec.id); });
+    actions.appendChild(btnEdit); actions.appendChild(btnDel);
+
+    row.appendChild(cb); row.appendChild(txt); row.appendChild(actions);
+    li.appendChild(row);
+    listEl.appendChild(li);
+  });
+
+  if (visibleCount === 0) {
+    listEl.innerHTML = '<div class="empty-state">' + (projRecs.length === 0 ? 'No tasks yet — add one below!' : 'No tasks match your filter.') + '</div>';
+  }
+}
+
+/* ===== EDIT TASK ===== */
+function editTask(rec, li) {
+  if (li.querySelector('.edit-form')) return;
+  const form = document.createElement('div'); form.className = 'edit-form';
+  form.innerHTML = `
+    <div class="edit-form-grid">
+      <div class="edit-field"><label>Task</label><input type="text" id="ef-task" value="${esc(rv(rec,'task'))}"></div>
+      <div class="edit-field"><label>Assignee</label>
+        <select id="ef-assignee">
+          <option value="">None</option>
+          <option${getFirstAssignee(rec)==='Alfred'?' selected':''}>Alfred</option>
+          <option${getFirstAssignee(rec)==='Vanessa'?' selected':''}>Vanessa</option>
+          <option${getFirstAssignee(rec)==='Kathy'?' selected':''}>Kathy</option>
+          <option${getFirstAssignee(rec)==='Alberto'?' selected':''}>Alberto</option>
+        </select>
+      </div>
+      <div class="edit-field"><label>Priority</label>
+        <select id="ef-pri">
+          <option${rv(rec,'priority')==='High'?' selected':''}>High</option>
+          <option${rv(rec,'priority')==='Medium'?' selected':''}>Medium</option>
+          <option${rv(rec,'priority')==='Low'?' selected':''}>Low</option>
+        </select>
+      </div>
+      <div class="edit-field"><label>Status</label>
+        <select id="ef-status">
+          <option${rv(rec,'status')==='Pending'?' selected':''}>Pending</option>
+          <option${rv(rec,'status')==='In Progress'?' selected':''}>In Progress</option>
+          <option${rv(rec,'status')==='Completed'?' selected':''}>Completed</option>
+          <option${rv(rec,'status')==='Blocked'?' selected':''}>Blocked</option>
+        </select>
+      </div>
+      <div class="edit-field"><label>Due Date</label><input type="date" id="ef-due" value="${rv(rec,'dueDate')}"></div>
+      <div class="edit-field"><label>Project</label>
+        <select id="ef-proj">${projects.map(p => '<option value="'+esc(p.id)+'"'+(rv(rec,'project')===p.id?' selected':'')+'>'+esc(p.label)+'</option>').join('')}</select>
+      </div>
+    </div>
+    <div class="edit-form-grid full" style="margin-top:8px">
+      <div class="edit-field"><label>Details</label><input type="text" id="ef-det" value="${esc(rv(rec,'details'))}"></div>
+    </div>
+    <div class="edit-btns">
+      <button class="btn-save" id="ef-save">Save</button>
+      <button class="btn-cancel" id="ef-cancel">Cancel</button>
+    </div>
+  `;
+  li.appendChild(form);
+
+  form.querySelector('#ef-save').addEventListener('click', () => {
+    const fields = {};
+    fields[F.task] = form.querySelector('#ef-task').value.trim();
+    fields[F.assignee] = assigneeToLinkedIds(form.querySelector('#ef-assignee').value);
+    fields[F.priority] = form.querySelector('#ef-pri').value;
+    fields[F.status] = form.querySelector('#ef-status').value;
+    fields[F.dueDate] = form.querySelector('#ef-due').value || null;
+    fields[F.project] = form.querySelector('#ef-proj').value;
+    fields[F.details] = form.querySelector('#ef-det').value.trim();
+    updateRecord(rec.id, fields);
+  });
+  form.querySelector('#ef-cancel').addEventListener('click', () => form.remove());
+}
+
+/* ===== ADD TASK ===== */
+document.getElementById('add-task-btn').addEventListener('click', addNewTask);
+document.getElementById('new-task').addEventListener('keydown', e => { if(e.key==='Enter') addNewTask(); });
+
+function addNewTask() {
+  const name = document.getElementById('new-task').value.trim();
+  if (!name) return;
+  const fields = {};
+  fields[F.task] = name;
+  fields[F.project] = activeProject;
+  fields[F.priority] = document.getElementById('new-priority').value;
+  fields[F.assignee] = assigneeToLinkedIds(document.getElementById('new-assignee').value);
+  fields[F.status] = 'Pending';
+  const due = document.getElementById('new-due').value;
+  if (due) fields[F.dueDate] = due;
+  const det = document.getElementById('new-detail').value.trim();
+  if (det) fields[F.details] = det;
+  createRecord(fields);
+  document.getElementById('new-task').value = '';
+  document.getElementById('new-detail').value = '';
+  document.getElementById('new-due').value = '';
+}
+
+/* ===== FILTER/SORT LISTENERS ===== */
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderPanel();
+  });
+});
+document.getElementById('sort-select').addEventListener('change', e => { currentSort = e.target.value; renderPanel(); });
+document.getElementById('search-input').addEventListener('input', e => { searchQuery = e.target.value; renderPanel(); });
 
 /* ===== RENDER ===== */
 function render(){ updateDash(); renderTabs(); renderPanel(); }
-render();
+
+// Initial load if already authenticated
+if (sessionStorage.getItem('vv-tracker-auth')==='true') { fetchAll(); }
+
+// Auto-refresh every 30 seconds
+setInterval(fetchAll, 30000);
 </script>
 </body>
 </html>
